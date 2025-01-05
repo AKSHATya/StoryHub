@@ -12,31 +12,34 @@ import express from 'express';
 import dotenv from 'dotenv';
 
 dotenv.config();
+
 // Initialize Express app
 const app = express();
 
-// File upload configuration
 const uploadMiddleware = multer({ dest: 'uploads/' });
-
 const salt = bcrypt.genSaltSync(10);
-const secret = 'secret_key'; 
+const secret = 'secret_key';
 
-// Middlewares
-app.use(cors({ credentials: true, origin: 'http://localhost:3000' }));
+app.use(cors({ credentials: true, origin: process.env.CLIENT_ORIGIN || '*' }));
 app.use(express.json());
 app.use(cookieParser());
 app.use('/uploads', express.static(path.join(path.resolve(), 'uploads')));
 
-mongoose.connect(process.env.MONGO_URL)
+// Serve frontend static files
+const __dirname = path.resolve(); // Handle __dirname in ES module
+app.use(express.static(path.join(__dirname, 'build')));
+
+// MongoDB connection
+mongoose
+  .connect(process.env.MONGO_URL)
   .then(() => {
     console.log('Connected to MongoDB');
   })
   .catch((error) => {
     console.error('Error connecting to MongoDB:', error.message);
   });
-// Routes
 
-// User Registration
+// API Routes
 app.post('/register', async (req, res) => {
   const { username, password } = req.body;
   try {
@@ -49,7 +52,6 @@ app.post('/register', async (req, res) => {
   }
 });
 
-// User Login
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
   try {
@@ -69,7 +71,6 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// Get User Profile
 app.get('/profile', (req, res) => {
   const { token } = req.cookies;
   jwt.verify(token, secret, {}, (err, info) => {
@@ -78,12 +79,10 @@ app.get('/profile', (req, res) => {
   });
 });
 
-// Logout
 app.post('/logout', (req, res) => {
   res.cookie('token', '').json('Logged out');
 });
 
-// Create Post
 app.post('/post', uploadMiddleware.single('file'), async (req, res) => {
   const { originalname } = req.file;
   const ext = originalname.split('.').pop();
@@ -110,7 +109,6 @@ app.post('/post', uploadMiddleware.single('file'), async (req, res) => {
   });
 });
 
-// Update Post
 app.put('/post', uploadMiddleware.single('file'), async (req, res) => {
   let newPath = null;
   if (req.file) {
@@ -143,7 +141,6 @@ app.put('/post', uploadMiddleware.single('file'), async (req, res) => {
   });
 });
 
-// Get Posts
 app.get('/post', async (req, res) => {
   try {
     const posts = await Post.find()
@@ -157,7 +154,6 @@ app.get('/post', async (req, res) => {
   }
 });
 
-// Get Post by ID
 app.get('/post/:id', async (req, res) => {
   const { id } = req.params;
   try {
@@ -169,7 +165,10 @@ app.get('/post/:id', async (req, res) => {
   }
 });
 
-// Start Server
-app.listen(4000, () => {
-  console.log('Server running on http://localhost:4000');
+// Serve frontend for all other routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
+
+// Export the app for Vercel
+module.exports = app;
