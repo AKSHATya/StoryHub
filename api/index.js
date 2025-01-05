@@ -9,16 +9,17 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 import express from 'express';
+import dotenv from 'dotenv';
 
+dotenv.config();
 // Initialize Express app
 const app = express();
 
 // File upload configuration
 const uploadMiddleware = multer({ dest: 'uploads/' });
 
-// Constants for password hashing and JWT secret
 const salt = bcrypt.genSaltSync(10);
-const secret = 'secret_key'; // Replace with an environment variable in production
+const secret = 'secret_key'; 
 
 // Middlewares
 app.use(cors({ credentials: true, origin: 'http://localhost:3000' }));
@@ -26,19 +27,13 @@ app.use(express.json());
 app.use(cookieParser());
 app.use('/uploads', express.static(path.join(path.resolve(), 'uploads')));
 
-// MongoDB Connection
-// const MONGO_URL = 'mongodb://127.0.0.1:27017/Story'; 
-// mongoose.connect(MONGO_URL, {
-//   useNewUrlParser: true,
-//   useUnifiedTopology: true,
-// })
-//   .then(() => console.log('Connected to MongoDB'))
-//   .catch((error) => console.error('Error connecting to MongoDB:', error.message));
-mongoose.connect('mongodb+srv://akshaty961:j.iCHPbsU6629X-@suretrust.jee2d.mongodb.net/?retryWrites=true&w=majority&appName=suretrust')
-  .then(() => console.log('Connected to MongoDB'))
-  .catch((error) => console.error('Error connecting to MongoDB:', error.message));
-
-
+mongoose.connect(process.env.MONGO_URL)
+  .then(() => {
+    console.log('Connected to MongoDB');
+  })
+  .catch((error) => {
+    console.error('Error connecting to MongoDB:', error.message);
+  });
 // Routes
 
 // User Registration
